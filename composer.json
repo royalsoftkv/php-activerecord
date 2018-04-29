@@ -1,5 +1,6 @@
 {
     "name": "royalsoft/php-activerecord",
+    "version": "1.0-sf",
     "authors": [
         {
             "name": "RoyalSoft",
