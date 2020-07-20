@@ -34,7 +34,8 @@ class MysqlAdapter extends Connection
 	{
 		$c = new Column();
 		$c->inflected_name	= Inflector::instance()->variablize($column['field']);
-		$c->name			= $column['field'];
+		//fix for mysql columns
+		$c->name			= strtolower($column['field']);
 		$c->nullable		= ($column['null'] === 'YES' ? true : false);
 		$c->pk				= ($column['key'] === 'PRI' ? true : false);
 		$c->auto_increment	= ($column['extra'] === 'auto_increment' ? true : false);

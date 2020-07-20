@@ -80,6 +80,34 @@ class Config extends Singleton
 	private $date_format = \DateTime::ISO8601;
 
 	/**
+	 * Function to execute after conenction
+	 *
+	 * @var Closure
+	 */
+	public $onConnect;
+
+	/**
+	 * Function to execute before each query
+	 *
+	 * @var Closure
+	 */
+	public $beforeQuery;
+
+	/**
+	 * Function to execute after each query
+	 *
+	 * @var Closure
+	 */
+	public $afterQuery;
+
+	/**
+	 * Function to execute if error in query occured
+	 *
+	 * @var Closure
+	 */
+	public $onError;
+
+	/**
 	 * Allows config initialization using a closure.
 	 *
 	 * This method is just syntatic sugar.

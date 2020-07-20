@@ -38,7 +38,7 @@ class DateTime extends \DateTime
 	/**
 	 * Default format used for format() and __toString()
 	 */
-	public static $DEFAULT_FORMAT = 'rfc2822';
+	public static $DEFAULT_FORMAT = 'db';
 
 	/**
 	 * Pre-defined format strings.
@@ -136,7 +136,8 @@ class DateTime extends \DateTime
 		call_user_func_array(array($this,'parent::setISODate'),func_get_args());
 	}
 
-	public function setTime($hour, $minute, $second=null)
+	//PHP-7-FIX
+	public function setTime($hour, $minute, $second=null, $microseconds=0)
 	{
 		$this->flag_dirty();
 		call_user_func_array(array($this,'parent::setTime'),func_get_args());

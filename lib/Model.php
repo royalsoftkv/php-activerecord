@@ -423,7 +423,7 @@ class Model
 	public function __wakeup()
 	{
 		// make sure the models Table instance gets initialized when waking up
-		static::table();
+		// static::table();
 	}
 
 	/**
@@ -453,12 +453,38 @@ class Model
 
 		// make sure DateTime values know what model they belong to so
 		// dirty stuff works when calling set methods on the DateTime object
-		if ($value instanceof DateTime)
+		if ($value instanceof DateTime) {
 			$value->attribute_of($this,$name);
+			if(isset($this->attributes[$name])) {
+				$v1=$this->attributes[$name]->getTimestamp();
+			} else {
+				$v1=null;
+			}
+			if(isset($value)) {
+				$v2=$value->getTimestamp();
+			} else {
+				$v2=null;
+			}
+			$flag_as_dirty = $this->check_dirty($v1, $v2);
+		} else {
+			$flag_as_dirty = $this->check_dirty(isset($this->attributes[$name]) ? $this->attributes[$name] : null, $value);
+		}
 
 		$this->attributes[$name] = $value;
+		if ($flag_as_dirty) {
 		$this->flag_dirty($name);
+		}
 		return $value;
+	}
+
+	function check_dirty($a, $b) {
+		if(isset($a) && isset($b)) {
+			return ($a===$b) ? false : true;
+		} else if(!isset($a) && !isset($b)) {
+			return false;
+		} else {
+			return true;
+		}
 	}
 
 	/**
@@ -1584,7 +1610,8 @@ class Model
 		$options['conditions'] = static::pk_conditions($values);
 		$list = static::table()->find($options);
 		$results = count($list);
-
+		//PHP-7-FIX
+		if(!is_array($values)) $values=[$values];
 		if ($results != ($expected = count($values)))
 		{
 			$class = get_called_class();
@@ -1615,9 +1642,9 @@ class Model
 	 * @param array $values An array of values for any parameters that needs to be bound
 	 * @return array An array of models
 	 */
-	public static function find_by_sql($sql, $values=null)
+	public static function find_by_sql($sql, $values=null, $read_only=true)
 	{
-		return static::table()->find_by_sql($sql, $values, true);
+		return static::table()->find_by_sql($sql, $values, $read_only);
 	}
 
 	/**
@@ -1832,7 +1859,7 @@ class Model
 	 * });
 	 * </code>
 	 *
-	 * @param Closure $closure The closure to execute. To cause a rollback have your closure return false or throw an exception.
+	 * @param \Closure $closure The closure to execute. To cause a rollback have your closure return false or throw an exception.
 	 * @return boolean True if the transaction was committed, False if rolled back.
 	 */
 	public static function transaction($closure)
@@ -1858,5 +1885,44 @@ class Model
 		}
 		return true;
 	}
+
+	protected static function p($obj, $name) {
+		if($obj instanceof Model && isset($obj->attributes[$name])) return $obj->attributes[$name];
+		if(is_object($obj) && property_exists($obj, $name)) return $obj->$name;
+		if(is_array($obj)) return $obj[$name];
+	}
+
+	protected static function process($s,$data,$vars,$vars_eval=array()) {
+		foreach($vars as $var) {
+			$val = self::p($data, $var);
+			$s = str_replace("{".$var."}", $val, $s);
+		}
+		foreach($vars_eval as $var => $eval) {
+			eval('$val='.$eval.';');
+			$s = str_replace("{".$var."}", $val, $s);
+		}
+		return $s;
+	}
+
+	static function from() {
+		return " from ".static::$table_name." ". static::$alias. " ";
+	}
+
+	static function col($col) {
+		return static::$alias.".".$col;
+	}
+
+	static function join($target, $column, $target_column=null, $source_alias=null,$target_alias=null) {
+		if($source_alias==null) $source_alias = static::$alias;
+		if($target_alias==null) $target_alias = $target::$alias;
+		if($target_column==null) $target_column = $target::$primary_key;
+		return " left join ".$target::$table_name." $target_alias on ($source_alias.$column = $target_alias.$target_column) ";
+	}
+
+	static function joinCondition($target, $condition, $target_alias=null) {
+		if($target_alias==null) $target_alias = $target::$alias;
+		return " left join ".$target::$table_name." $target_alias on ($condition) ";
+	}
+
 };
 ?>

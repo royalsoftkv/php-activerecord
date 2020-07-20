@@ -115,6 +115,11 @@ abstract class Connection
 
 			if (isset($info->charset))
 				$connection->set_encoding($info->charset);
+
+			if(is_callable($config->onConnect)) {
+				call_user_func($config->onConnect, $connection);
+			}
+
 		} catch (PDOException $e) {
 			throw new DatabaseException($e);
 		}
@@ -307,12 +312,20 @@ abstract class Connection
 			if ( $values ) $this->logger->log($values);
 		}
 
+		$config = Config::instance();
+		if(is_callable($config->beforeQuery)) {
+			call_user_func($config->beforeQuery, $this);
+		}
+
 		$this->last_query = $sql;
 
 		try {
 			if (!($sth = $this->connection->prepare($sql)))
 				throw new DatabaseException($this);
 		} catch (PDOException $e) {
+			if(is_callable($config->onError)) {
+				call_user_func($config->onError, $e, $this, $sql, $values);
+			}
 			throw new DatabaseException($this);
 		}
 
@@ -322,8 +335,16 @@ abstract class Connection
 			if (!$sth->execute($values))
 				throw new DatabaseException($this);
 		} catch (PDOException $e) {
+			if(is_callable($config->onError)) {
+				call_user_func($config->onError, $e, $this, $sql, $values);
+			}
 			throw new DatabaseException($e);
 		}
+
+		if(is_callable($config->afterQuery)) {
+			call_user_func($config->afterQuery, $this, $sql, $values);
+		}
+
 		return $sth;
 	}
 
@@ -347,9 +368,9 @@ abstract class Connection
 	 * @param string $sql Raw SQL string to execute.
 	 * @param Closure $handler Closure that will be passed the fetched results.
 	 */
-	public function query_and_fetch($sql, Closure $handler)
+	public function query_and_fetch($sql, Closure $handler, $values=array())
 	{
-		$sth = $this->query($sql);
+		$sth = $this->query($sql, $values);
 
 		while (($row = $sth->fetch(PDO::FETCH_ASSOC)))
 			$handler($row);
