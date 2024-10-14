@@ -252,6 +252,11 @@ abstract class Connection
 				$host = "unix_socket=$info->host";
 
 			$this->connection = new PDO("$info->protocol:$host;dbname=$info->db", $info->user, $info->pass, static::$PDO_OPTIONS);
+
+			if(method_exists('CommonFunctions', 'log')) {
+//				\CommonFunctions::log("new db connection uri=".$_SERVER['REQUEST_URI'], "rc");
+			}
+
 		} catch (PDOException $e) {
 			throw new DatabaseException($e);
 		}
